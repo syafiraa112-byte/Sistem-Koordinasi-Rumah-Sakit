@@ -22,6 +22,14 @@ Anda tidak boleh menjawab pertanyaan sendiri. Tugas Anda HANYA melakukan perutea
 
 **KELUARAN WAJIB:**
 Pastikan keputusan perutean tunggal, akurat, dan langsung mengarah pada pemanggilan fungsi yang dipilih.
+
+# PANDUAN INTEGRASI TEKNIS (KHUSUS UNTUK BACKEND)
+
+Anda harus beroperasi seolah-olah Anda adalah bagian dari alur Function Calling yang ketat.
+
+1.  **Strict Mode (Mode Ketat):** Output Anda harus selalu berupa **panggilan fungsi tunggal** (Single Function Call). Jangan pernah menghasilkan teks bebas (*free text*) sebagai respons jika fungsi harus dipanggil.
+2.  **Failure Protocol (Protokol Kegagalan):** Jika permintaan pengguna **tidak jelas** atau **tidak sesuai** dengan empat fungsi spesialis yang tersedia (Patient Info, Medical Info, Document Gen, Admin Task), berikan balasan *free text* yang singkat, sopan, dan meminta klarifikasi, misalnya: "Mohon jelaskan lebih spesifik apa yang Anda cari. Permintaan Anda saat ini tidak dapat dirutekan ke agen spesialis."
+3.  **Prioritas Keamanan:** Jika permintaan menyentuh data sensitif tanpa konteks atau izin, selalu rutekan ke \`manage_patient_info\` dan nyatakan bahwa Anda membutuhkan konfirmasi.
 `;
 
 // --- 2. Tool Definitions ---
@@ -43,13 +51,25 @@ const managePatientInfoTool: FunctionDeclaration = {
 
 const assistMedicalInfoTool: FunctionDeclaration = {
   name: AgentType.MEDICAL,
-  description: "Menyediakan dukungan untuk pengambilan informasi medis, penelitian, dan bantuan diagnostik. Wajib menggunakan Google Search secara ekstensif untuk pengetahuan medis terkini.",
+  description: "Menyediakan dukungan untuk pengambilan informasi medis, penelitian, dan bantuan diagnostik. Wajib menggunakan Google Search secara ekstensif untuk pengetahuan medis terkini. Prioritaskan publikasi terbaru dan desain studi spesifik (misalnya, 'uji acak terkendali', 'meta-analisis') jika parameter tanggal atau tipe studi disediakan.",
   parameters: {
     type: Type.OBJECT,
     properties: {
       query: {
         type: Type.STRING,
         description: "Kueri spesifik pengguna tentang informasi medis, diagnosis, atau hasil penelitian.",
+      },
+      start_date: {
+        type: Type.STRING,
+        description: "Tanggal awal rentang waktu pencarian (format: YYYY-MM-DD).",
+      },
+      end_date: {
+        type: Type.STRING,
+        description: "Tanggal akhir rentang waktu pencarian (format: YYYY-MM-DD).",
+      },
+      study_type: {
+        type: Type.STRING,
+        description: "Jenis desain studi yang diinginkan (contoh: 'randomized controlled trial', 'meta-analysis', 'systematic review').",
       },
     },
     required: ["query"],
@@ -120,14 +140,13 @@ export interface GeminiResponse {
 }
 
 export const sendMessageToCoordinator = async (message: string): Promise<GeminiResponse> => {
+  // NOTE: For production deployments (e.g., Netlify), this client-side call should be replaced 
+  // with a fetch to a backend function (like /.netlify/functions/gemini-router) to secure the API key.
+  // For this demo environment, we use the client-side key directly.
   if (!client) client = initializeGemini();
   if (!client) throw new Error("API Key missing or invalid.");
 
   try {
-    // We use generateContent with the full context each time for this stateless demo,
-    // or we could use chat. For routing, a single turn usually suffices if we pass the system instruction.
-    // However, keeping context is better. For this specific 'Router' task, single shot is often safer to force routing behavior.
-    
     const result = await client.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: [

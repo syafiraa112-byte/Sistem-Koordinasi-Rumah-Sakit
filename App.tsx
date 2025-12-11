@@ -29,7 +29,14 @@ const App: React.FC = () => {
             responseText = `[Sub-Agen Pasien] Saya telah menerima kueri Anda: "${args.query}". \n\nMemeriksa basis data pasien... \n✅ Data ditemukan. Silakan lanjutkan ke loket pendaftaran 3 atau gunakan aplikasi mobile untuk detail janji temu.`;
             break;
         case AgentType.MEDICAL:
-             responseText = `[Sub-Agen Medis] Menganalisis kueri medis: "${args.query}". \n\nBerdasarkan protokol klinis terbaru dan pencarian literatur: Gejala yang disebutkan memerlukan pemeriksaan fisik lebih lanjut. \n⚠️ Disclaimer: Ini adalah informasi awal, bukan diagnosis resmi dokter.`;
+             const filters = [];
+             if (args.study_type) filters.push(`Tipe Studi: ${args.study_type}`);
+             if (args.start_date) filters.push(`Dari: ${args.start_date}`);
+             if (args.end_date) filters.push(`Sampai: ${args.end_date}`);
+             
+             const filterMsg = filters.length > 0 ? `\nFilter Pencarian: ${filters.join(', ')}` : '';
+             
+             responseText = `[Sub-Agen Medis] Menganalisis kueri medis: "${args.query}".${filterMsg} \n\nBerdasarkan protokol klinis terbaru dan pencarian literatur: Gejala yang disebutkan memerlukan pemeriksaan fisik lebih lanjut. \n⚠️ Disclaimer: Ini adalah informasi awal, bukan diagnosis resmi dokter.`;
              break;
         case AgentType.DOCUMENT:
             responseText = `[Sub-Agen Dokumen] Membuat dokumen tipe: ${args.document_type}. \n\nMengisi konten dengan: "${args.content_details}"... \n📄 Dokumen telah dibuat dan siap untuk ditinjau/dicetak.`;
