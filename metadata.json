@@ -1,0 +1,5 @@
+{
+  "name": "Sistem Koordinator Rumah Sakit",
+  "description": "Agen AI Cerdas yang merutekan permintaan rumah sakit ke sub-agen spesialis yang tepat (Pasien, Medis, Dokumen, Admin).",
+  "requestFramePermissions": []
+}
